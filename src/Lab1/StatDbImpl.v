@@ -25,7 +25,9 @@ Module StatDB (v : VarsAPI) <: StatDbAPI.
 
   (** ** Exercise : complete the implementation of mean *)
   Definition mean : proc (option nat) :=
-    Ret None.
+    sum <- v.read VarSum;
+    count <- v.read VarCount;
+    Ret (if count=?0 then None else Some (sum/count)).
 
   Definition init' : proc InitResult :=
     _ <- v.write VarCount 0;
@@ -39,7 +41,8 @@ Module StatDB (v : VarsAPI) <: StatDbAPI.
 
   (** ** Exercise : complete the implementation of the abstraction function: *)
   Definition statdb_abstraction (vars_state : VariablesAPI.State) (statdb_state : StatDbAPI.State) : Prop :=
-    True.
+    StateCount vars_state = length statdb_state /\
+    StateSum vars_state = fold_right Init.Nat.add 0 statdb_state.
 
   Definition abstr : Abstraction StatDbAPI.State :=
     abstraction_compose
@@ -56,21 +59,30 @@ Module StatDB (v : VarsAPI) <: StatDbAPI.
   Example abstr_2_ok : statdb_abstraction (VariablesAPI.mkState 2 3) [1; 2].
   Proof.
     unfold statdb_abstraction; simpl.
-  Admitted.
+    split; auto.
+  Qed.
 
   Example abstr_3_ok : statdb_abstraction (VariablesAPI.mkState 0 0) nil.
   Proof.
-  Admitted.
+    unfold statdb_abstraction; simpl.
+    split; auto.
+  Qed.
 
   Example abstr_4_nok : ~ statdb_abstraction (VariablesAPI.mkState 1 0) [2].
   Proof.
     unfold statdb_abstraction; simpl.
-  Admitted.
+    unfold not; intros.
+    destruct H.
+    inversion H0.
+  Qed.
 
   Example abstr_5_nok : ~ statdb_abstraction (VariablesAPI.mkState 1 0) nil.
   Proof.
     unfold statdb_abstraction; simpl.
-  Admitted.
+    unfold not; intros.
+    destruct H.
+    inversion H.
+  Qed.
 
   Theorem init_ok : init_abstraction init recover abstr inited.
   Proof.
@@ -92,7 +104,45 @@ Module StatDB (v : VarsAPI) <: StatDbAPI.
     intros.
 
     apply spec_abstraction_compose; simpl.
-  Admitted.
+    step_proc.
+    {
+      exists state2.
+      split; auto.
+    }
+    step_proc.
+    {
+      inversion H1.
+    }
+    step_proc.
+    {
+      inversion H1.
+    }
+    step_proc.
+    {
+      inversion H1.
+    }
+    step_proc.
+    {
+      exists (v::state2).
+      split.
+      -
+        split; auto.
+      -
+        unfold statdb_abstraction in *.
+        simpl.
+        split.
+        +
+          replace (StateCount state + 1) with (1 + StateCount state) by lia.
+          simpl.
+          destruct H0;
+            auto.
+        +
+          destruct H0.
+          rewrite H1.
+          lia.
+    }
+    inversion H1.
+  Qed.
 
   Opaque Nat.div.
 
@@ -103,8 +153,50 @@ Module StatDB (v : VarsAPI) <: StatDbAPI.
     intros.
 
     apply spec_abstraction_compose; simpl.
-
-  Admitted.
+    step_proc.
+    {
+      inversion H1.
+    }
+    step_proc.
+    {
+      inversion H1.
+    }
+    step_proc.
+    {
+      unfold statdb_abstraction in *.
+      destruct H0.
+      exists state2.
+      split.
+      2 : split; auto.
+      split.
+      {
+        reflexivity.
+      }
+      destruct state2.
+      {
+        left.
+        split.
+        -
+          auto.
+        -
+          simpl in *.
+          rewrite H0,H1.
+          auto.
+      }
+      {
+        right.
+        split.
+        -
+          intros.
+          inversion H2.
+        -
+          rewrite H0, H1.
+          simpl.
+          auto.
+      }
+    }
+    inversion H1.
+  Qed.
 
 
   Theorem recover_wipe : rec_wipe recover abstr no_crash.
