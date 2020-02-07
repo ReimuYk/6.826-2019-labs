@@ -33,3 +33,9 @@ every line should have a return value (maybe \_, like (\_ <- xxx)
 >   nightly-build-plans: http://mirrors.ustc.edu.cn/stackage/stackage-nightly/
 
 use ustc open source to acclerate download.
+
+# Lab2
+
+BadBlock disk is an application using CHL framework
+
+BadBlock disk has an extra block at the tail and an extra attribute "bad block id". "bad block id" points out a block in the disk and whenever we read the bad block, we get the content of the last block.
