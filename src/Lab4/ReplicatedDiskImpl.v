@@ -576,11 +576,17 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
 
   (* EXERCISE (4b): write a spec for recovery *)
   Definition Recover_spec : Specification _ unit unit TwoDiskBaseAPI.State :=
-    fun (_:unit) state =>
+    fun '(d, a, v) state =>
       {|
-        pre := True;
-        post := fun _ state' => True;
-        recovered := fun _ state' => True;
+        pre :=
+          two_disks_are state (eq (diskUpd d a v)) (eq (diskUpd d a v)) \/
+          two_disks_are state (eq (diskUpd d a v)) (eq d);
+        post := fun _ state' =>
+          two_disks_are state' (eq (diskUpd d a v)) (eq (diskUpd d a v)) \/
+          two_disks_are state' missing (eq d);
+        recovered := fun _ state' =>
+          two_disks_are state' (eq (diskUpd d a v)) (eq (diskUpd d a v)) \/
+          two_disks_are state' (eq (diskUpd d a v)) (eq d);
       |}.
 
   (* EXERCISE (4c): prove recovery correct *)
@@ -600,7 +606,12 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
   Proof.
     unfold idempotent.
     intuition; simplify.
-  Admitted.
+    exists a.
+    destruct a.
+    destruct p.
+    simpl in *.
+    intuition.
+  Qed.
 
   (* This proof combines your proof that recovery is correct and that its
   specification is idempotent to show recovery is correct even if re-run on
@@ -663,14 +674,82 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
     intros.
     apply spec_abstraction_compose; simpl.
     eapply compose_recovery; eauto; simplify.
-  Admitted.
+    exists state2.
+    intuition.
+    {
+      exists state2.
+      unfold rd_abstraction in *.
+      intuition.
+    }
+    unfold rd_abstraction in *.
+    exists (state2, diskSize state2, block0).
+    intuition.
+    {
+      simpl.
+      right.
+      rewrite diskUpd_none; auto.
+      apply disk_oob_eq.
+      lia.
+    }
+    exists state2.
+    simpl in *.
+    intuition.
+    rewrite diskUpd_none in H1.
+    2: apply disk_oob_eq; lia.
+    auto.
+  Qed.
 
   Theorem write_ok : forall a v, proc_spec (write_spec a v) (write a v) recover abstr.
   Proof.
     intros.
     apply spec_abstraction_compose; simpl.
     eapply compose_recovery; eauto; simplify.
-  Admitted.
+    exists state2.
+    unfold rd_abstraction in *.
+    intuition.
+    {
+      exists (diskUpd state2 a v).
+      intuition.
+    }
+    {
+      exists (state2, diskSize state2, block0).
+      intuition.
+      {
+        simpl.
+        right.
+        rewrite diskUpd_none; auto.
+        apply disk_oob_eq; lia.
+      }
+      exists state2.
+      intuition.
+      simpl in *.
+      intuition.
+      rewrite diskUpd_none in H1; auto.
+      apply disk_oob_eq; lia.
+    }
+    {
+      exists (state2, a, v).
+      simpl in *.
+      intuition.
+      {
+        exists (diskUpd state2 a v).
+        intuition.
+      }
+      {
+        exists state2.
+        intuition.
+      }
+    }
+    exists (state2, a, v).
+    simpl.
+    intuition.
+    {
+      exists (diskUpd state2 a v).
+      intuition.
+    }
+    exists state2.
+    intuition.
+  Qed.
 
   Theorem size_ok : proc_spec size_spec size recover abstr.
   Proof.
@@ -681,7 +760,20 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
     eapply compose_recovery; eauto.
     intros; apply exists_tuple2.
     destruct a; simpl in *.
-  Admitted.
+    simplify.
+    unfold rd_abstraction in *.
+    exists s.
+    exists s.
+    intuition.
+    1: (exists s; intuition).
+    exists (s, diskSize s, block0).
+    simpl.
+    rewrite diskUpd_none.
+    2: (apply disk_oob_eq; lia).
+    intuition.
+    1: (exists s; intuition).
+    exists s; intuition.
+  Qed.
 
   (* This theorem shows that Ret does not modify the abstract state exposed by
   the replicated disk; the interesting part is that if recovery runs, then the
@@ -692,6 +784,13 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
   Proof.
     eapply rec_wipe_compose; eauto; simpl.
     autounfold; unfold rd_abstraction, Recover_spec; simplify.
-  Admitted.
+    exists (state0', diskSize state0', block0).
+    simpl.
+    rewrite diskUpd_none.
+    2: apply disk_oob_eq; lia.
+    intuition.
+    1: (exists state0'; intuition).
+    exists state0'; intuition.
+  Qed.
 
 End ReplicatedDisk.
