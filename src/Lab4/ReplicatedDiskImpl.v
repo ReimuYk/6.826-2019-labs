@@ -222,7 +222,9 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
                  that this is the two-disk API's recovery, not the replicated
                  disk's recovery, so it should cover all the crash cases for
                  write *)
-             True;
+                 two_disks_are state' (eq d) (eq d) \/
+                 two_disks_are state' (eq (diskUpd d a b)) (eq d) \/
+                 two_disks_are state' (eq (diskUpd d a b)) (eq (diskUpd d a b));
            |})
         (write a b)
         td.recover
