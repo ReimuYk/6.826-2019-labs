@@ -20,7 +20,16 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
 
   (* EXERCISE (4a): implement read *)
   Definition read (a:addr) : proc block :=
-    Ret block0.
+    r <- td.read d0 a;
+      match r with
+      | Working v => Ret v
+      | Failed =>
+        r <- td.read d1 a;
+          match r with
+          | Working v => Ret v
+          | Failed => Ret block0
+          end
+      end.
 
   Definition write (a:addr) (b:block) : proc unit :=
     _ <- td.write d0 a b;
@@ -192,7 +201,8 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
     automation in this lab. *)
 
     step.
-  Admitted.
+    repeat (destruct r; step).
+  Qed.
 
   Hint Resolve read_int_ok : core.
 
@@ -219,8 +229,17 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
         td.abstr.
   Proof.
     unfold write.
-
-  Admitted.
+    step.
+    destruct r.
+    {
+      step.
+      destruct r; step.
+    }
+    {
+      step.
+      destruct r; step.
+    }
+  Qed.
 
   Hint Resolve write_int_ok : core.
 
@@ -245,8 +264,10 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
       td.abstr.
   Proof.
     unfold size.
-
-  Admitted.
+    step.
+    destruct r; step.
+    destruct r; step.
+  Qed.
 
   Hint Resolve size_int_ok : core.
 
