@@ -573,7 +573,98 @@ Module ReplicatedDisk (td : TwoDiskAPI) <: OneDiskAPI.
         td.abstr.
   Proof.
     (* EXERCISE (4d): prove [fixup_ok] *)
-  Admitted.
+    intros.
+    step.
+    destruct s.
+    {
+      exists d, (eq d).
+      intuition.
+      destruct r.
+      {
+        step.
+        exists d, (eq d).
+        intuition.
+        {
+          Print "?|=".
+          destruct (diskGet d a) eqn:Heq; simpl in H2.
+          1: rewrite diskUpd_same in H3; auto.
+          1: intuition.
+          rewrite diskUpd_none in H3; assumption.
+        }
+        destruct r; step.
+      }
+      {
+        step.
+      }
+    }
+    {
+      exists (diskUpd d a0 b), (eq d).
+      intuition.
+      1: destruct (equal_dec a a0); intuition.
+      destruct r; step.
+      {
+        exists d, (eq (diskUpd d a0 b)).
+        destruct (equal_dec a a0); intuition.
+        {
+          rewrite diskUpd_eq in H2; intuition.
+          simpl in H2.
+          subst.
+          intuition.
+        }
+        {
+          step.
+          {
+            destruct r; auto.
+          }
+          destruct r; intuition.
+        }
+        {
+          rewrite diskUpd_neq in H2; intuition.
+          simpl in H2.
+          assert (diskUpd d a v = d).
+          {
+            apply diskUpd_same.
+            destruct (diskGet d a) eqn:Heq; simpl in H2.
+            1: intuition.
+            apply disk_none_oob in Heq.
+            lia.
+          }
+          rewrite H5 in H3.
+          auto.
+        }
+        step.
+        {
+          destruct r; intuition.
+          assert (diskUpd d a v = d).
+          {
+            apply diskUpd_same.
+            destruct (diskGet d a) eqn:Heq; simpl in H2.
+            1: intuition.
+            apply disk_none_oob in Heq.
+            lia.
+          }
+          rewrite H4 in H3.
+          auto.
+        }
+        {
+          destruct r; intuition.
+          assert (diskUpd d a v = d).
+          {
+            apply diskUpd_same.
+            destruct (diskGet d a) eqn:Heq; simpl in H2.
+            1: intuition.
+            apply disk_none_oob in Heq.
+            lia.
+          }
+          rewrite H4 in H3.
+          auto.
+        }
+      }
+      destruct (equal_dec a a0).
+      1: intuition.
+      intuition.
+    }
+  Qed.
   Print fixup_ok.
 
   Hint Resolve fixup_ok : core.
